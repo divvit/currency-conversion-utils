@@ -1,6 +1,6 @@
 {
    "name": "@divvit/currency-converter",
-   "version": "1.0.0",
+   "version": "1.0.1",
    "description": "Convert a value from one currency to another according to exchange rate of a certain day.",
    "main": "index.js",
    "scripts": {

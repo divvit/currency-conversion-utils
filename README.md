@@ -37,4 +37,5 @@ Nino Ulsamer, Divvit AB
 
 ## Release History
 
+* 1.0.1 Improved README formatting
 * 1.0.0 Initial release
