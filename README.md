@@ -9,6 +9,7 @@ A small library to convert currencies according to the EZB exchange rates.
 
 ## Usage
 
+```JavaScript
   var converter = require('@divvit/currency-converter')();
   // if you want to change the storage path, call the script like that:
   // var converter = require('@divvit/currency-converter')({ storageDir: '/some/other/path' });
@@ -24,6 +25,7 @@ A small library to convert currencies according to the EZB exchange rates.
 
     console.log('Converted ' + eurValue + ' EUR to ' + usdValue + ' USD, according to FX rate of ' . conversionDate.format('DD.MM.YYYY') );
   });
+```
 
 ## Tests
 
