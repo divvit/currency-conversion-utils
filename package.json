@@ -1,0 +1,32 @@
+{
+   "name": "@divvit/currency-converter",
+   "version": "1.0.0",
+   "description": "Convert a value from one currency to another according to exchange rate of a certain day.",
+   "main": "index.js",
+   "scripts": {
+      "test": "./node_modules/.bin/mocha"
+   },
+   "repository": {
+      "type": "git",
+      "url": "https://github.com/divvit/currency-converter.git"
+   },
+   "keywords": [
+      "currency",
+      "converter"
+   ],
+   "author": "Nino Ulsamer <nino@divvit.com> (http://www.divvit.com/)",
+   "license": "MIT",
+   "bugs": {
+      "url": "https://github.com/divvit/currency-converter/issues"
+   },
+   "dependencies": {
+      "async": "1.5.2",
+      "moment": "2.11.1",
+      "moment-timezone": "0.5.0",
+      "adm-zip": "0.4.7"
+   },
+   "devDependencies": {
+      "chai": "^3.4.1",
+      "mocha": "^2.3.4"
+   }
+}
