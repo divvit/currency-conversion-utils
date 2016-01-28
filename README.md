@@ -37,5 +37,6 @@ Nino Ulsamer, Divvit AB
 
 ## Release History
 
+* 1.0.2 Changed default working directory to __dirname
 * 1.0.1 Improved README formatting
 * 1.0.0 Initial release

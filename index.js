@@ -14,7 +14,7 @@ var CurrencyConverter = function(options) {
    options = options || {};
 
    this.options = {
-      storageDir: options.storageDir || process.env.TMPDIR
+      storageDir: options.storageDir || __dirname
    };
 };
 
