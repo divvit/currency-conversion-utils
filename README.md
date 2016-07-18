@@ -37,6 +37,7 @@ Nino Ulsamer, Divvit AB
 
 ## Release History
 
+* 1.0.3 Fixed issue #1: round currency conversion results to max 2 digits
 * 1.0.2 Changed default working directory to __dirname
 * 1.0.1 Improved README formatting
 * 1.0.0 Initial release

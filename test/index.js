@@ -16,6 +16,16 @@ describe('#CurrencyConverter', function() {
 
    });
 
+   it('should convert from USD to USD', function(done) {
+      converter.convert(10, moment('2015-01-01'), 'USD', 'USD', function(err, convertedValue) {
+         should.not.exist(err);
+
+         expect(convertedValue).equals(10);
+         done();
+      });
+
+   });
+
    it('should convert from USD to SEK and back', function(done) {
       this.timeout(10000);
       var originalValue = 15;
@@ -76,5 +86,17 @@ describe('#CurrencyConverter', function() {
       });
    });
 
-});
+   it('should round conversion result', function(done) {
+      this.timeout(10000);
+      var originalValue = 15;
 
+      converter.convert(originalValue, moment('2015-01-01'), 'USD', 'SEK', function(err, convertedValue) {
+         should.not.exist(err);
+
+         convertedValue.should.equal(Math.round(convertedValue * 100) / 100);
+         done();
+      });
+
+   });
+
+});
