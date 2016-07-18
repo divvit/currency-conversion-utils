@@ -29,6 +29,10 @@ CurrencyConverter.prototype.convert = function(currencyValue, conversionDate, fr
    if (parseFloat(currencyValue) != currencyValue)
       return callback('Currency value is not a number');
 
+   if (fromCurrency === toCurrency) {
+      return callback(null, currencyValue);
+   }
+
    async.series([
 
       // check if the currency rate feed requires updating
@@ -119,7 +123,8 @@ CurrencyConverter.prototype.convert = function(currencyValue, conversionDate, fr
                      }
                   }
 
-                  return callback(null, currencyValue / fromCurrencyConversion * toCurrencyConversion);
+                  return callback(null,
+                     Math.round(currencyValue / fromCurrencyConversion * toCurrencyConversion * 100) / 100);
                }
             }
 
