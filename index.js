@@ -42,7 +42,7 @@ module.exports = class CurrencyConverter {
     }
 
     if (fromCurrency === toCurrency) {
-      return callback(null, currencyValue);
+      return callback(null, buildResult(currencyValue));
     }
 
     if (this.processingQueue.length() > 10){
@@ -152,7 +152,7 @@ module.exports = class CurrencyConverter {
     if (conversionsForDay) {
       try {
         var value = processConversion(conversionsForDay, currencyValue, fromCurrency, toCurrency);
-        return callback(null, value);
+        return callback(null, buildResult(value, conversionsForDay, fromCurrency, toCurrency));
       } catch (err) {
         return callback(err);
       }
@@ -179,7 +179,7 @@ module.exports = class CurrencyConverter {
 
     try {
       var value = processConversion(this.data[index], currencyValue, fromCurrency, toCurrency);
-      return callback(null, value);
+      return callback(null, buildResult(value, this.data[index], fromCurrency, toCurrency));
     } catch (err) {
       return callback(err);
     }
@@ -212,4 +212,14 @@ function processConversion(conversionsForDay, currencyValue, fromCurrency, toCur
     }
   }
   return (Math.round(currencyValue / fromCurrencyConversion * toCurrencyConversion * 100) / 100);
+}
+
+function buildResult(value, conversionsForDay, fromCurrency, toCurrency){
+   return {
+      value: value,
+      // values used for the conversion (maybe important for debugging )
+      usedDate: conversionsForDay ? conversionsForDay.date : null,
+      usedFromRate: conversionsForDay ? conversionsForDay[fromCurrency] : 1,
+      usedToRate: conversionsForDay ? conversionsForDay[toCurrency] : 1
+   }
 }
