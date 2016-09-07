@@ -1,135 +1,225 @@
-"use strict";
+'use strict';
 
-var async = require('async');
-var moment = require('moment');
-var fs = require('fs');
-var http = require('http');
-var AdmZip = require('adm-zip');
+/**
+ * In Memory currency conversion.
+ * The user has the option to create an instance of it or use a pre-created single instance.
+ * This new approach uses BinarySearch to find the date.
+ * When a day is missig the this will use the nearest day before to do the convertion (e.g weekends)
+ */
+const zlib = require('zlib');
+const async = require('async');
+const bs = require('binary-search');
+const moment = require('moment');
+const fs = require('fs');
+const http = require('http');
+const AdmZip = require('adm-zip');
 
-module.exports = function() {
-   return new CurrencyConverter();
+const FEED_CSV_SEPARATOR = ',';
+
+let singleInstance;
+
+module.exports = class CurrencyConverter {
+  constructor(useExtraMap, storageDir) {
+    this.useExtraMap = useExtraMap;
+    this.storageDir = storageDir ? storageDir : __dirname;
+    this.feedFilepathZipped = this.storageDir + '/eurofxref-hist.zip';
+    this.feedFilepath = this.storageDir + '/eurofxref-hist.csv';
+    this.updating = false;
+    this.data = [];
+    this.dataByDate = {};
+    this.conversionStrategy = this.useExtraMap === true ? this._useBoth : this._useBinarySearch;
+    this.processingQueue = async.queue((task, callback) => {
+      this._convert(task.currencyValue, task.conversionDate, task.fromCurrency, task.toCurrency, callback);
+    }, 1);
+    
+    console.log('CurrencyConveter - StorageDir: ' + this.storageDir);
+  }
+
+  convert(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
+    
+    if (parseFloat(currencyValue) !== currencyValue) {
+      return callback('CurrencyConveter - value is not a number');
+    }
+
+    if (fromCurrency === toCurrency) {
+      return callback(null, buildResult(currencyValue));
+    }
+
+    if (this.processingQueue.length() > 10){
+      console.log(`CurrencyConveter - QueueSize: ${this.processingQueue.length()}`);
+    }
+    
+    this.processingQueue.push({
+      currencyValue: currencyValue,
+      conversionDate: conversionDate,
+      fromCurrency: fromCurrency,
+      toCurrency: toCurrency
+    }, callback);
+  }
+
+  _convert(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
+    async.series([
+      (callback) => this._checkUpdateRequired(conversionDate, callback),
+    ], (err) => {
+      if (err) {
+        return callback(err);
+      }
+      this.conversionStrategy(currencyValue, conversionDate, fromCurrency, toCurrency, callback);
+    });
+  }
+
+  _checkUpdateRequired(conversionDate, callback) {
+    fs.stat(this.feedFilepath, (err, stats) => {
+      if (err && err.code === 'ENOENT') {
+        // file does not exist -> download
+        this._updateFile(callback);
+        return;
+      } else if (err) {
+        return callback(err);
+      } else {
+        if (!moment(stats.mtime).subtract(1, 'days').isAfter(conversionDate, 'day') && moment(conversionDate).isValid()) {
+          this._updateFile(callback);
+          return;
+        } else {
+          if (this.data.length === 0) {
+            this._updateDataInMemory(callback);
+          } else {
+            callback();
+          }
+        }
+      }
+    });
+  }
+
+  _updateFile(callback) {
+    console.log(`CurrencyConveter - is updating...`);
+    var file = fs.createWriteStream(this.feedFilepathZipped);
+    var request = http.get('http://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip', (response) => {
+      response.pipe(file);
+      file.on('finish', () => {
+        file.close((err) => {
+          if (err) {
+            return callback(err);
+          }
+          // unzip file
+          var zip = new AdmZip(this.feedFilepathZipped);
+          zip.extractEntryTo('eurofxref-hist.csv', this.storageDir, false, true);
+          this._updateDataInMemory(callback);
+        });
+      });
+    }).on('error', (err) => {
+      return callback(err);
+    });
+  }
+
+  _updateDataInMemory(callback) {
+    this.dataByDate = {};
+    this.data = [];
+    fs.readFile(this.feedFilepath, 'utf8', (err, data) => {
+      if (err) {
+        return callback(err);
+      }
+
+      var array = data.toString().split('\n');
+      // first line contains currency codes, ignore first column (date)
+      var currencyCodes = array.shift().split(FEED_CSV_SEPARATOR);
+      currencyCodes.shift();
+      for (var i in array) {
+        var line = array[i];
+        var conversionRates = line.split(FEED_CSV_SEPARATOR);
+        var date = conversionRates.shift();
+
+        var currencyObj = {
+          date: date
+        };
+
+        for (var j = 0; j < currencyCodes.length; j++) {
+          currencyObj['' + currencyCodes[j]] = conversionRates[j];
+        }
+        this.data.push(currencyObj);
+
+        if (this.useExtraMap === true) {
+          this.dataByDate[currencyObj.date] = currencyObj;
+        }
+      }
+      console.log(`CurrencyConveter - has updated the data. Records: ${this.data.length}`);
+      callback();
+    });
+  }
+
+  _useBoth(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
+    var conversionsForDay = this.dataByDate[moment(conversionDate).format('YYYY-MM-DD')];
+    if (conversionsForDay) {
+      try {
+        var value = processConversion(conversionsForDay, currencyValue, fromCurrency, toCurrency);
+        return callback(null, buildResult(value, conversionsForDay, fromCurrency, toCurrency));
+      } catch (err) {
+        return callback(err);
+      }
+    } else {
+      this._useBinarySearch(currencyValue, conversionDate, fromCurrency, toCurrency, callback);
+    }
+  }
+
+  _useBinarySearch(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
+    var index = bs(this.data, {
+      date: conversionDate
+    }, function(a, b) {
+      return moment(b.date).diff(a.date);
+    });
+
+    // Gives us the position where the date should be places plus one and negated.
+    if (index < 0) {
+      index = Math.abs(index) - 1;
+
+      if (index >= this.data.length) {
+        return callback('Could not find currency data for date ' + conversionDate.format());
+      }
+    }
+
+    try {
+      var value = processConversion(this.data[index], currencyValue, fromCurrency, toCurrency);
+      return callback(null, buildResult(value, this.data[index], fromCurrency, toCurrency));
+    } catch (err) {
+      return callback(err);
+    }
+  }
+
+  // Single global instance if the user.
+  static getDefaultInstance(){
+     if (!singleInstance){
+        singleInstance = new CurrencyConverter(false, null);
+     }
+     return singleInstance;
+  }
+};
+
+function processConversion(conversionsForDay, currencyValue, fromCurrency, toCurrency) {
+  // we found our day! now search for currency
+  var fromCurrencyConversion = 1;
+  if (fromCurrency !== 'EUR') {
+    fromCurrencyConversion = conversionsForDay[fromCurrency];
+    if (!fromCurrencyConversion) {
+      throw new Error('Could not find source currency ' + fromCurrency);
+    }
+  }
+
+  var toCurrencyConversion = 1;
+  if (toCurrency !== 'EUR') {
+    toCurrencyConversion = conversionsForDay[toCurrency];
+    if (!toCurrencyConversion) {
+      throw new Error('Could not find target currency ' + toCurrency);
+    }
+  }
+  return (Math.round(currencyValue / fromCurrencyConversion * toCurrencyConversion * 100) / 100);
 }
 
-var CurrencyConverter = function(options) {
-   options = options || {};
-
-   this.options = {
-      storageDir: options.storageDir || __dirname
-   };
-};
-
-CurrencyConverter.prototype.convert = function(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
-
-   var updateRequired = false;
-   var storageDir = this.options.storageDir;
-   var feedFilepathZipped = storageDir + '/eurofxref-hist.zip';
-   var feedFilepath = storageDir + '/eurofxref-hist.csv';
-   var FEED_CSV_SEPARATOR = ',';
-
-   if (parseFloat(currencyValue) != currencyValue)
-      return callback('Currency value is not a number');
-
-   if (fromCurrency === toCurrency) {
-      return callback(null, currencyValue);
+function buildResult(value, conversionsForDay, fromCurrency, toCurrency){
+   return {
+      value: value,
+      // values used for the conversion (maybe important for debugging )
+      usedDate: conversionsForDay ? conversionsForDay.date : null,
+      usedFromRate: conversionsForDay ? conversionsForDay[fromCurrency] : 1,
+      usedToRate: conversionsForDay ? conversionsForDay[toCurrency] : 1
    }
-
-   async.series([
-
-      // check if the currency rate feed requires updating
-      function checkUpdateRequired(callback) {
-         fs.stat(feedFilepath, function(err, stats) {
-            if (err && err.code === 'ENOENT') {
-               // file does not exist -> download
-               updateRequired = true;
-            } else if (err) {
-               return callback(err);
-            } else {
-               if (!moment(stats.mtime).subtract(1, 'days').isAfter(conversionDate, 'day')) {
-                  // file needs updating
-                  updateRequired = true;
-               }
-            }
-
-            callback();
-         });
-      },
-
-      // update the currency rate feed if outdated or not existing
-      function updateFile(callback) {
-         if (updateRequired) {
-            var file = fs.createWriteStream(feedFilepathZipped);
-
-            var request = http.get('http://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip', function(response) {
-               response.pipe(file);
-               file.on('finish', function() {
-                  file.close(function(err) {
-                     if (err)
-                        return callback(err);
-
-                     // unzip file
-                     var zip = new AdmZip(feedFilepathZipped);
-                     zip.extractEntryTo('eurofxref-hist.csv', storageDir, false, true);
-
-                     callback();
-                  });
-               });
-            }).on('error', function(err) {
-               return callback(err);
-            });
-         } else {
-            callback();
-         }
-      }
-
-      ], function done(err) {
-         if (err)
-            return callback(err);
-
-         fs.readFile(feedFilepath, 'utf8', function (err, data) {
-            if (err)
-               return callback(err);
-
-            var array = data.toString().split('\n');
-
-            // first line contains currency codes, ignore first column (date)
-            var currencyCodes = array.shift().split(FEED_CSV_SEPARATOR);
-            currencyCodes.shift();
-
-            for (var i in array) {
-               var line = array[i];
-               var conversionRates = line.split(FEED_CSV_SEPARATOR);
-               var date = conversionRates.shift();
-
-               // try to find the date. don't only look for exact matches, because weekends do not get data for example.
-               // instead, we know that the file is sorted by date DESC and therefore we stop when we find the first date
-               // that is before or on (=not after) the date we are looking for
-               if (!moment(date).isAfter(conversionDate, 'day')) {
-                  // we found our day! now search for currency
-                  var fromCurrencyConversion = 1;
-                  if (fromCurrency !== 'EUR') {
-                     if (currencyCodes.indexOf(fromCurrency) !== -1) {
-                        fromCurrencyConversion = conversionRates[currencyCodes.indexOf(fromCurrency)];
-                     } else {
-                        return callback('Could not find source currency '+fromCurrency);
-                     }
-                  }
-
-                  var toCurrencyConversion = 1;
-                  if (toCurrency !== 'EUR') {
-                     if (currencyCodes.indexOf(toCurrency) !== -1) {
-                        toCurrencyConversion = conversionRates[currencyCodes.indexOf(toCurrency)];
-                     } else {
-                        return callback('Could not find target currency '+toCurrency);
-                     }
-                  }
-
-                  return callback(null,
-                     Math.round(currencyValue / fromCurrencyConversion * toCurrencyConversion * 100) / 100);
-               }
-            }
-
-            callback('Could not find currency data for date ' + conversionDate.format());
-         });
-      }
-   );
-};
+}

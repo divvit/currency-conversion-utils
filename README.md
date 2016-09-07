@@ -19,11 +19,11 @@ A small library to convert currencies according to the EZB exchange rates.
 
   var eurValue = 10;
   var conversionDate = moment('2015-01-01');
-  converter.convert(eurValue, conversionDate, 'EUR', 'USD', function(err, usdValue) {
+  converter.convert(eurValue, conversionDate, 'EUR', 'USD', function(err, usdResult) {
     if (err)
       return callback(err);
 
-    console.log('Converted ' + eurValue + ' EUR to ' + usdValue + ' USD, according to FX rate of ' . conversionDate.format('DD.MM.YYYY') );
+    console.log('Converted ' + eurValue + ' EUR to ' + usdResult.value + ' USD, according to FX rate of ' . usdResult.usedDate.format('DD.MM.YYYY') );
   });
 ```
 
@@ -37,6 +37,7 @@ Nino Ulsamer, Divvit AB
 
 ## Release History
 
+* 2.0.0 Uses data in-memory and binary-search and includes and enriched response.  
 * 1.0.3 Fixed issue #1: round currency conversion results to max 2 digits
 * 1.0.2 Changed default working directory to __dirname
 * 1.0.1 Improved README formatting
