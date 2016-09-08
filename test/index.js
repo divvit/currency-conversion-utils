@@ -128,6 +128,25 @@ function makeTests(converter, description) {
          });
       });
 
+      // NOTE: this test simulates a real-time situation where we use the rates of the day before.
+      it('test realtime usage!', function (done) {
+         this.timeout(10000);
+         var now = moment();
+         converter.convert(15, now, 'USD', 'SEK', function (err, result) {
+            should.not.exist(err);
+            assert.ok(now.isAfter(moment(result.usedDate)));
+            done();
+         });
+      });
+
+      it('Test day epochs!', function (done) {
+         this.timeout(10000);
+         assert.equal(Converter.getDayEpoch(), Math.floor(new Date()/86400000));
+         assert.equal(Converter.getDayEpoch(null), Math.floor(new Date()/86400000));
+         assert.equal(Converter.getDayEpoch(undefined), Math.floor(new Date()/86400000));
+         assert.equal(Converter.getDayEpoch(moment('2016-09-01')), 17044)
+         done();
+      });
    });
 }
 
