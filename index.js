@@ -77,7 +77,7 @@ module.exports = class CurrencyConverter {
       } else if (err) {
         return callback(err);
       } else {
-        if (CurrencyConverter.getDayEpoch() > CurrencyConverter.getDayEpoch(moment(stats.mtime))){
+        if (moment().startOf('day').diff(moment(stats.mtime).startOf('day'), 'days') != 0){
           this._updateFile(callback);
           return;
         } else {

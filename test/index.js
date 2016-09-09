@@ -138,15 +138,6 @@ function makeTests(converter, description) {
             done();
          });
       });
-
-      it('Test day epochs!', function (done) {
-         this.timeout(10000);
-         assert.equal(Converter.getDayEpoch(), Math.floor(new Date()/86400000));
-         assert.equal(Converter.getDayEpoch(null), Math.floor(new Date()/86400000));
-         assert.equal(Converter.getDayEpoch(undefined), Math.floor(new Date()/86400000));
-         assert.equal(Converter.getDayEpoch(moment('2016-09-01')), 17044)
-         done();
-      });
    });
 }
 
