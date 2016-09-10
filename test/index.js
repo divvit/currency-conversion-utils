@@ -128,6 +128,16 @@ function makeTests(converter, description) {
          });
       });
 
+      // NOTE: this test simulates a real-time situation where we use the rates of the day before.
+      it('test realtime usage!', function (done) {
+         this.timeout(10000);
+         var now = moment();
+         converter.convert(15, now, 'USD', 'SEK', function (err, result) {
+            should.not.exist(err);
+            assert.ok(now.isAfter(moment(result.usedDate)));
+            done();
+         });
+      });
    });
 }
 

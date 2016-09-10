@@ -27,6 +27,11 @@ A small library to convert currencies according to the EZB exchange rates.
   });
 ```
 
+## Important Notes:
+
+- If the queried day exists in the cache then the library uses the queried day for conversion. 
+- If the queried day does not exit the library will try to use the nearst day before.
+
 ## Tests
 
   npm test
@@ -36,7 +41,7 @@ A small library to convert currencies according to the EZB exchange rates.
 Nino Ulsamer, Divvit AB
 
 ## Release History
-
+* 2.0.0 Fix currency file updates. 
 * 2.0.0 Uses data in-memory and binary-search and includes and enriched response.  
 * 1.0.3 Fixed issue #1: round currency conversion results to max 2 digits
 * 1.0.2 Changed default working directory to __dirname

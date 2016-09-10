@@ -77,7 +77,7 @@ module.exports = class CurrencyConverter {
       } else if (err) {
         return callback(err);
       } else {
-        if (!moment(stats.mtime).subtract(1, 'days').isAfter(conversionDate, 'day') && moment(conversionDate).isValid()) {
+        if (moment().startOf('day').diff(moment(stats.mtime).startOf('day'), 'days') != 0){
           this._updateFile(callback);
           return;
         } else {
@@ -191,6 +191,10 @@ module.exports = class CurrencyConverter {
         singleInstance = new CurrencyConverter(false, null);
      }
      return singleInstance;
+  }
+  
+  static getDayEpoch(unixTsInMillis){
+     return Math.floor((unixTsInMillis ? unixTsInMillis : new Date())/86400000);
   }
 };
 
