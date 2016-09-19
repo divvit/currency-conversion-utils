@@ -7,6 +7,15 @@ const assert = require('chai').assert;
 function makeTests(converter, description) {
    describe(description, function () {
 
+      it('should convert from USD to EUR using string', function (done) {
+         this.timeout(10000);
+         converter.convert("10", moment('2015-01-01'), 'USD', 'EUR', function (err, result) {
+            should.not.exist(err);
+            expect(result.value).to.be.within(8, 9);
+            done();
+         });
+      });
+
       it('should convert from USD to EUR', function (done) {
          this.timeout(10000);
          converter.convert(10, moment('2015-01-01'), 'USD', 'EUR', function (err, result) {
