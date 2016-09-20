@@ -37,7 +37,7 @@ module.exports = class CurrencyConverter {
 
   convert(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
     
-    if (parseFloat(currencyValue) !== currencyValue) {
+    if (parseFloat(currencyValue) != currencyValue) {
       return callback('CurrencyConveter - value is not a number');
     }
 
