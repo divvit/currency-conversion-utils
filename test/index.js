@@ -7,20 +7,32 @@ const assert = require('chai').assert;
 function makeTests(converter, description) {
    describe(description, function () {
 
+      it('return always number', function (done) {
+         this.timeout(10000);
+         converter.convert("10", moment('2015-01-01'), 'EUR', 'EUR', function (err, result) {
+            should.not.exist(err);
+            assert.equal(result.value, 10);
+            assert.equal(typeof result.value, 'number');
+            done();
+         });
+      });
+
       it('should convert from USD to EUR using string', function (done) {
          this.timeout(10000);
          converter.convert("10", moment('2015-01-01'), 'USD', 'EUR', function (err, result) {
             should.not.exist(err);
             expect(result.value).to.be.within(8, 9);
+            assert.equal(typeof result.value, 'number');
             done();
          });
       });
-
+      
       it('should convert from USD to EUR', function (done) {
          this.timeout(10000);
          converter.convert(10, moment('2015-01-01'), 'USD', 'EUR', function (err, result) {
             should.not.exist(err);
             expect(result.value).to.be.within(8, 9);
+            assert.equal(typeof result.value, 'number');
             done();
          });
 
@@ -31,6 +43,7 @@ function makeTests(converter, description) {
             should.not.exist(err);
             assert.equal(result.usedDate, null);
             expect(result.value).equals(10);
+            assert.equal(typeof result.value, 'number');
             done();
          });
 
