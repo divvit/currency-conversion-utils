@@ -37,12 +37,13 @@ module.exports = class CurrencyConverter {
 
   convert(currencyValue, conversionDate, fromCurrency, toCurrency, callback) {
     
-    if (parseFloat(currencyValue) != currencyValue) {
-      return callback('CurrencyConveter - value is not a number');
+    var parsedValue = parseFloat(currencyValue);
+    if (parsedValue != currencyValue) {
+      return callback('CurrencyConveter - value is not a number: ' + currencyValue);
     }
 
     if (fromCurrency === toCurrency) {
-      return callback(null, buildResult(currencyValue));
+      return callback(null, buildResult(parsedValue));
     }
 
     if (this.processingQueue.length() > 10){
@@ -50,7 +51,7 @@ module.exports = class CurrencyConverter {
     }
     
     this.processingQueue.push({
-      currencyValue: currencyValue,
+      currencyValue: parsedValue,
       conversionDate: conversionDate,
       fromCurrency: fromCurrency,
       toCurrency: toCurrency
