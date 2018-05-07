@@ -1,3 +1,5 @@
+I moved all development and fixes to bitbucket repo (https://bitbucket.org/divvit/app-stack/src/develop/divvit-modules/currency-converter/)
+
 Currency Converter
 =========
 
