@@ -92,7 +92,7 @@ module.exports = class CurrencyConverter {
     });
   }
 
-  _updateFile(callback) {
+  _updateFile(callback, attempt_num) {
     console.log(`CurrencyConveter - is updating...`);
     var file = fs.createWriteStream(this.feedFilepathZipped);
     var request = http.get('http://www.ecb.europa.eu/stats/eurofxref/eurofxref-hist.zip', (response) => {
@@ -103,8 +103,23 @@ module.exports = class CurrencyConverter {
             return callback(err);
           }
           // unzip file
-          var zip = new AdmZip(this.feedFilepathZipped);
-          zip.extractEntryTo('eurofxref-hist.csv', this.storageDir, false, true);
+          try {
+            var zip = new AdmZip(this.feedFilepathZipped);
+            zip.extractEntryTo('eurofxref-hist.csv', this.storageDir, false, true);
+          } catch (error) {
+            file.close((err) => {
+              if (err) { /* ignore error */ }
+              fs.unlink(this.feedFilepathZipped, (err) => {
+                attempt_num = attempt_num || 0;
+                if (attempt_num < 1) {
+                  return this._updateFile(callback, attempt_num + 1);
+                } else {
+                  console.warn(`CurrencyConveter - failed to read update data`);
+                  return callback(error);
+                }
+              })
+            })
+          }
           this._updateDataInMemory(callback);
         });
       });
